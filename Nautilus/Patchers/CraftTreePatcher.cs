@@ -33,7 +33,7 @@ internal class CraftTreePatcher
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(CraftTree), nameof(CraftTree.GetTree))]
-    private static void GetTreePreFix(CraftTree.Type treeType, ref CraftTree __result)
+    private static void GetTreePostfix(CraftTree.Type treeType, ref CraftTree __result)
     {
         var craftTree = !CustomTrees.TryGetValue(treeType, out var customRoot) ? __result : customRoot.CustomCraftingTree;
 
@@ -71,7 +71,7 @@ internal class CraftTreePatcher
 
     private static void PatchCraftTree(ref CraftTree __result, CraftTree.Type type)
     {
-        List<Node> removals = NodesToRemove.TryGetValue(type, out removals)? removals: new List<Node>();
+        List<Node> removals = NodesToRemove.TryGetValue(type, out removals)? new List<Node>(removals): new List<Node>();
         RemoveNodes(ref __result, ref removals);
 
         AddCustomTabs(ref __result, type);
@@ -152,8 +152,12 @@ internal class CraftTreePatcher
                 continue;
             }
 
+            if (!currentNode.parent.RemoveNode(currentNode))// Remove the node from its parent
+            {
+                InternalLogger.Warn($"Skipped removing craft tree node in {nameof(RemoveNodes)} for '{nodeToRemove.Scheme}' at '{string.Join("/", nodeToRemove.Path)}'. Could not remove the node.");
+                continue;
+            }
             currentNode.Clear(); // Remove all child nodes (if any)
-            currentNode.parent.RemoveNode(currentNode); // Remove the node from its parent
             nodesToRemove.Remove(nodeToRemove); // Remove the node from the list of nodes to remove
             InternalLogger.Debug($"Removed node from {nodeToRemove.Scheme} tree at {string.Join("/", nodeToRemove.Path)}.");
         }
@@ -172,19 +176,10 @@ internal class CraftTreePatcher
     private static TreeNode CopyCraftNode(TreeNode treeNode)
     {
         var copiedNode = treeNode.Copy();
-        copiedNode.nodes = treeNode.nodes.ToList();
-
-        if (copiedNode.nodes.Count == 0)
+        for (var i = 0; i < treeNode.nodes.Count; i++)
         {
-            return copiedNode;
-        }
-
-        for (var i = 0; i < copiedNode.nodes.Count; i++)
-        {
-            treeNode.nodes[i] = CopyCraftNode(treeNode.nodes[i]);
-            treeNode.nodes[i].parent = copiedNode;
-        }
-        
+            copiedNode.AddNode(CopyCraftNode(treeNode.nodes[i]));
+        }        
         return copiedNode;
     }
 
