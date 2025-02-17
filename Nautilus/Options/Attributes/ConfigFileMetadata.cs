@@ -56,26 +56,26 @@ internal class ConfigFileMetadata<T> where T : ConfigFile, new()
 
     private void processMetadata()
     {
-        BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public;
-        foreach (PropertyInfo property in typeof(T).GetProperties(bindingFlags)
-                     .Where(memberIsDeclaredInConfigFileSubclass) // Only care about members declared in a subclass of ConfigFile
-                     .Where(memberIsNotIgnored)) // Filter out explicitly ignored members
+        BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static;
+        
+        foreach (MemberInfo member in typeof(T).GetMembers(bindingFlags)
+                     .Where(memberIsDeclaredInConfigFileSubclass)
+                     .Where(memberIsNotIgnored))
         {
-            processFieldOrProperty(property, MemberType.Property, property.PropertyType);
-        }
-
-        foreach (FieldInfo field in typeof(T).GetFields(bindingFlags)
-                     .Where(memberIsDeclaredInConfigFileSubclass) // Only care about members declared in a subclass of ConfigFile
-                     .Where(memberIsNotIgnored)) // Filter out explicitly ignored members
-        {
-            processFieldOrProperty(field, MemberType.Field, field.FieldType);
-        }
-
-        foreach (MethodInfo method in typeof(T).GetMethods(bindingFlags | BindingFlags.Static)
-                     .Where(memberIsDeclaredInConfigFileSubclass) // Only care about members declared in a subclass of ConfigFile
-                     .Where(memberIsNotIgnored)) // Filter out explicitly ignored members
-        {
-            processMethod(method);
+            switch (member)
+            {
+                case FieldInfo field:
+                    if (!field.IsStatic)
+                        processFieldOrProperty(field, MemberType.Field, field.FieldType);
+                    break;
+                case PropertyInfo property:
+                    if (!property.GetGetMethod(true).IsStatic)
+                        processFieldOrProperty(property, MemberType.Property, property.PropertyType);
+                    break;
+                case MethodInfo method:
+                    processMethod(method);
+                    break;
+            }
         }
 
         InternalLogger.Debug($"[{ModName}] [{typeof(T).Name}] Found {ModOptionAttributesMetadata.Count()} options to add to the menu.");
