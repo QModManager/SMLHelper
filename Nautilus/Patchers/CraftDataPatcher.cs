@@ -118,6 +118,34 @@ internal partial class CraftDataPatcher
         parent.icon.SetActive(false);
     }
 
+    [HarmonyPatch(typeof(uGUI_CraftingMenu), nameof(uGUI_CraftingMenu.Expand))]
+    [HarmonyPostfix]
+    private static void uGUI_CraftingMenuExpandPostfix(uGUI_CraftingMenu __instance, uGUI_CraftingMenu.Node node)
+    {
+        uGUI_CraftingMenu.Node parent = node.parent as uGUI_CraftingMenu.Node;
+        if (node.parent == null)
+        {
+            return;
+        }
+        if (__instance.IsGrid(node))
+        {
+            using (IEnumerator<uGUI_CraftingMenu.Node> childEnumerator = parent.GetEnumerator())
+            {
+                while (childEnumerator.MoveNext())
+                {
+                    uGUI_CraftingMenu.Node thisChild = childEnumerator.Current;
+                    if (thisChild == node)
+                    {
+                        continue;
+                    }
+                    if (thisChild.action == TreeAction.Expand)
+                    {
+                        thisChild.icon.SetActive(false);
+                    }
+                }
+            }
+        }
+    }
     [HarmonyPrefix]
     [HarmonyPatch(typeof(CraftData), nameof(CraftData.GetTechType), new Type[] { typeof(GameObject), typeof(GameObject) }, argumentVariations: new ArgumentType[] { ArgumentType.Normal, ArgumentType.Out })]
     private static void CraftDataGetTechTypePrefix(GameObject obj, out GameObject go, ref TechType __result)
