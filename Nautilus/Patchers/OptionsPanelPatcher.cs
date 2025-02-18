@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using Nautilus.Handlers;
@@ -87,19 +88,15 @@ internal class OptionsPanelPatcher
             modsTab = optionsPanel.AddTab("Mods");
         }
 
-        // Maybe this could be split into its own file to handle nautilus options, or maybe it could be removed alltogether
-        optionsPanel.AddHeading(modsTab, "Nautilus");
-        optionsPanel.AddToggleOption(modsTab, "Enable debug logs", Utility.InternalLogger.EnableDebugging, Utility.InternalLogger.SetDebugging);
-        optionsPanel.AddToggleOption(modsTab, "Enable mod databank entries", ModDatabankHandler._isEnabled);
-        optionsPanel.AddChoiceOption(modsTab, "Extra item info", new string[]
-        {
-            "Mod name (default)",
-            "Mod name and item ID",
-            "Nothing"
-        }, (int)TooltipPatcher.ExtraItemInfoOption, (i) => TooltipPatcher.SetExtraItemInfo((TooltipPatcher.ExtraItemInfo)i));
+        var optionsToAdd = new List<ModOptions>(modOptions.Values);
+
+        var nautilusOptions = optionsToAdd.FirstOrDefault(options => options.Name == "Nautilus");
+        optionsToAdd.Remove(nautilusOptions);
+
+        nautilusOptions.AddOptionsToPanel(optionsPanel, modsTab);
 
         // adding all other options here
-        modOptions.Values.ForEach(options => options.AddOptionsToPanel(optionsPanel, modsTab));
+        optionsToAdd.ForEach(options => options.AddOptionsToPanel(optionsPanel, modsTab));
     }
 
     // Class for collapsing/expanding options in 'Mods' tab

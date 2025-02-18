@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -111,30 +112,22 @@ internal class TooltipPatcher
 
     internal static ExtraItemInfo ExtraItemInfoOption { get; private set; }
 
-    internal static void SetExtraItemInfo(ExtraItemInfo value)
+    internal static void RefreshExtraItemInfo(string configValue)
     {
-        string configPath =
-            Path.Combine(Path.Combine(BepInEx.Paths.ConfigPath, Assembly.GetExecutingAssembly().GetName().Name),
-                "ExtraItemInfo.txt");
-
-        string text;
-        switch (value)
+        //We store strings and swap to an enum so that the user gets a more friendly string, while enums are faster to operate on
+        var stringToEnum = new Dictionary<string, ExtraItemInfo>()
         {
-            case ExtraItemInfo.ModName:
-                text = "Mod name (default)";
-                break;
-            case ExtraItemInfo.ModNameAndItemID:
-                text = "Mod name and item ID";
-                break;
-            case ExtraItemInfo.Nothing:
-                text = "Nothing";
-                break;
-            default:
-                return;
+            { "Mod name (default)", ExtraItemInfo.ModName },
+            { "Mod name and item ID", ExtraItemInfo.ModNameAndItemID },
+            { "Nothing", ExtraItemInfo.Nothing },
+        };
+
+        if(!stringToEnum.TryGetValue(configValue, out ExtraItemInfo extraItemInfo))
+        {
+            throw new System.NotImplementedException("tooltip patcher value unrecognized. This error should never happen but should still have proper handling");
         }
 
-        File.WriteAllText(configPath, text);
-        ExtraItemInfoOption = value;
+        ExtraItemInfoOption = extraItemInfo;
     }
 
     internal static bool Initialized = false;
@@ -148,42 +141,7 @@ internal class TooltipPatcher
 
         Initialized = true;
 
-        var nautilusFolder = Path.Combine(BepInEx.Paths.ConfigPath, Assembly.GetExecutingAssembly().GetName().Name);
-        Directory.CreateDirectory(nautilusFolder);
-
-        var configPath = Path.Combine(nautilusFolder, "ExtraItemInfo.txt");
-
-        if (!File.Exists(configPath))
-        {
-            File.WriteAllText(configPath, "Mod name (default)");
-            ExtraItemInfoOption = ExtraItemInfo.ModName;
-
-            return;
-        }
-
-        var fileContents = File.ReadAllText(configPath);
-
-        switch (fileContents)
-        {
-            case "Mod name (default)":
-                ExtraItemInfoOption = ExtraItemInfo.ModName;
-                InternalLogger.Log($"Extra item info set to: {fileContents}", LogLevel.Info);
-                break;
-            case "Mod name and item ID":
-                ExtraItemInfoOption = ExtraItemInfo.ModNameAndItemID;
-                InternalLogger.Log($"Extra item info set to: {fileContents}", LogLevel.Info);
-                break;
-            case "Nothing":
-                ExtraItemInfoOption = ExtraItemInfo.Nothing;
-                InternalLogger.Log($"Extra item info set to: {fileContents}", LogLevel.Info);
-                break;
-            default:
-                File.WriteAllText(configPath, "Mod name (default)");
-                ExtraItemInfoOption = ExtraItemInfo.ModName;
-                InternalLogger.Log("Error reading ExtraItemInfo.txt configuration file. Defaulted to mod name.",
-                    LogLevel.Warning);
-                break;
-        }
+        RefreshExtraItemInfo(Initializer.ConfigFile.extraItemInfo);
     }
 
     #endregion
