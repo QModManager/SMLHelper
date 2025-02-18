@@ -127,7 +127,7 @@ public static partial class MaterialUtils
         /// </summary>
         Transparent,
         /// <summary>
-        /// Transparent pixels on the texture are not renderered. Useful for decals.
+        /// Transparent pixels on the texture are not rendered. Useful for decals.
         /// </summary>
         Cutout
     }
@@ -269,6 +269,65 @@ public static partial class MaterialUtils
                 SetMaterialTransparent(material, false);
                 SetMaterialCutout(material, false);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Applies base-game materials to custom <see cref="GameObject"/>s by matching the name of every material in every
+    /// renderer on your custom object (and any of its children) against those on the base-game object's renderers,
+    /// and any of its children. To use this class, go in-game, and lookup the name of the material you wish to apply
+    /// to your custom object using runtime editor. In Unity, rename the materials on your object(s) to match the name
+    /// of the material(s) in-game. Then, pass both your custom object, and the base-game object that the material(s)
+    /// you want to apply are on, to this method, and the game's material(s) will replace the ones you made. Passing
+    /// in parent-objects to those with the materials on them will also work.
+    /// </summary>
+    /// <param name="customPrefab">The custom <see cref="GameObject"/> you want to apply base-game materials to.</param>
+    /// <param name="baseGamePrefab">The base-game prefab which contains the material(s) you want to apply.</param>
+    public static void ApplyGameMaterials(GameObject customPrefab, GameObject baseGamePrefab)
+    {
+        if (customPrefab is null || baseGamePrefab is null)
+        {
+            InternalLogger.Error("Couldn't apply game materials because a null object was passed into the method.");
+            return;
+        }
+        
+        var customRenderers = customPrefab.GetComponentsInChildren<Renderer>(true);
+
+        for (int i = 0; i < customRenderers.Length; i++)
+        {
+            var newMaterialList = customRenderers[i].materials;
+
+            for (int j = 0; j < newMaterialList.Length; j++)
+            {
+                bool matFound = false;
+
+                foreach (var baseGameRenderer in baseGamePrefab.GetComponentsInChildren<Renderer>(true))
+                {
+                    foreach (var baseGameMat in baseGameRenderer.materials)
+                    {
+                        string baseMatName = baseGameMat.name.ToLower();
+                        string plainBaseMatName = "";
+                        
+                        //Removes the (instance) portion of the mat name, if it's present.
+                        if (baseMatName.Contains("(instance)"))
+                            plainBaseMatName = baseMatName.Substring(0, baseMatName.LastIndexOf('(') - 1);
+
+                        string customMatName = newMaterialList[j].name.ToLower();
+                        if (customMatName.Equals(baseMatName) || customMatName.Equals(plainBaseMatName))
+                        {
+                            newMaterialList[j] = baseGameMat;
+                            
+                            matFound = true;
+                            break;
+                        }
+                    }
+
+                    if (matFound)
+                        break;
+                }
+            }
+            
+            customRenderers[i].materials = newMaterialList;
         }
     }
 
