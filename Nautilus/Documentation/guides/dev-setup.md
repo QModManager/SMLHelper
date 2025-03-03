@@ -81,7 +81,7 @@ Since the project setup can be quite tedious for experienced developers and conf
 
 To install the template, run the following command in a terminal:
 ```bash
-dotnet new -i Subnautica.Templates
+dotnet new install Subnautica.Templates
 ```
 
 > [!NOTE]
