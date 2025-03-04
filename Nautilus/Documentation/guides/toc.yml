@@ -9,3 +9,5 @@
   href: sml2-to-nautilus.md
 - name: Using External Assets (Asset Bundles)
   href: assetbundles.md
+- name: Setting up Debugging
+  href: debugging.md
